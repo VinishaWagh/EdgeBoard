@@ -2002,52 +2002,60 @@ export default function App() {
 
   // Check login session on mount (including Google OAuth redirect hash parameters)
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes("access_token=")) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get("access_token");
-      
-      const processGoogleLogin = async () => {
-        try {
-          let email = "";
-          let name = "";
-          
-          if (accessToken === "mock_google_token") {
-            email = params.get("email") || "jordan@colledge.in";
-            name = params.get("name") || "Jordan Lee";
-          } else {
-            const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
-            if (response.ok) {
-              const data = await response.json();
-              email = data.email;
-              name = data.name || data.given_name || email.split("@")[0];
-            } else {
-              throw new Error("Failed to validate Google token");
-            }
-          }
-          
-          if (email) {
-            localStorage.setItem("user_email", email);
-            localStorage.setItem("user_name", name);
-            const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
-            localStorage.setItem("user_initials", initials || "U");
+    const checkHash = () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes("access_token=")) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        
+        const processGoogleLogin = async () => {
+          try {
+            let email = "";
+            let name = "";
             
+            if (accessToken === "mock_google_token") {
+              email = params.get("email") || "jordan@colledge.in";
+              name = params.get("name") || "Jordan Lee";
+            } else {
+              const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+              if (response.ok) {
+                const data = await response.json();
+                email = data.email;
+                name = data.name || data.given_name || email.split("@")[0];
+              } else {
+                throw new Error("Failed to validate Google token");
+              }
+            }
+            
+            if (email) {
+              localStorage.setItem("user_email", email);
+              localStorage.setItem("user_name", name);
+              const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
+              localStorage.setItem("user_initials", initials || "U");
+              
+              window.history.replaceState(null, "", window.location.pathname);
+              setAppState("app");
+            }
+          } catch (error) {
+            console.error("Error parsing Google OAuth redirect hash:", error);
             window.history.replaceState(null, "", window.location.pathname);
-            setAppState("app");
           }
-        } catch (error) {
-          console.error("Error parsing Google OAuth redirect hash:", error);
-          window.history.replaceState(null, "", window.location.pathname);
+        };
+        
+        processGoogleLogin();
+      } else {
+        const savedEmail = localStorage.getItem("user_email");
+        if (savedEmail) {
+          setAppState("app");
         }
-      };
-      
-      processGoogleLogin();
-    } else {
-      const savedEmail = localStorage.getItem("user_email");
-      if (savedEmail) {
-        setAppState("app");
       }
-    }
+    };
+
+    checkHash();
+    window.addEventListener("hashchange", checkHash);
+    return () => {
+      window.removeEventListener("hashchange", checkHash);
+    };
   }, []);
 
   // Load tasks on mount or appState change
