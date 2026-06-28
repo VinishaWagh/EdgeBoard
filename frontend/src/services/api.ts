@@ -32,14 +32,15 @@ export const mapTaskFromBackend = (t: any): Task => {
   return {
     id: t._id || t.id,
     title: t.title,
-    client: t.client || '',
+    category: (t.client || 'work') as any,
     priority: t.priority,
     status: t.status,
     dueDate: t.dueDate || '',
     tags: t.tags || [],
-    assigneeIds: t.assigneeIds || [],
     description: t.description || '',
-    activity: t.activity || []
+    activity: t.activity || [],
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt
   };
 };
 
@@ -89,21 +90,31 @@ export const taskService = {
     return mapTaskFromBackend(data);
   },
 
-  async createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
+  async createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> {
+    const { category, ...rest } = taskData as any;
+    const body = {
+      ...rest,
+      client: category
+    };
     const response = await fetch(`${API_URL}/tasks`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(taskData),
+      body: JSON.stringify(body),
     });
     const data = await handleResponse(response);
     return mapTaskFromBackend(data);
   },
 
   async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
+    const { category, ...rest } = taskData as any;
+    const body = {
+      ...rest,
+      ...(category !== undefined ? { client: category } : {})
+    };
     const response = await fetch(`${API_URL}/tasks/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify(taskData),
+      body: JSON.stringify(body),
     });
     const data = await handleResponse(response);
     return mapTaskFromBackend(data);
