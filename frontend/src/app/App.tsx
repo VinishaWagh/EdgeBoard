@@ -131,6 +131,40 @@ const GLOBAL_STYLES = `
     background-clip: text !important;
     color: transparent !important;
   }
+  
+  /* Sidebar responsive logic */
+  @media (max-width: 768px) {
+    .dashboard-sidebar {
+      position: fixed !important;
+      left: -100% !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      z-index: 100 !important;
+      transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5) !important;
+    }
+    .dashboard-sidebar.mobile-open {
+      left: 0 !important;
+    }
+    .sidebar-overlay {
+      display: block !important;
+    }
+    .main-content {
+      padding: 20px 16px !important;
+    }
+  }
+  @media (min-width: 769px) {
+    .dashboard-sidebar {
+      position: relative !important;
+      left: 0 !important;
+    }
+    .sidebar-overlay {
+      display: none !important;
+    }
+    .mobile-header {
+      display: none !important;
+    }
+  }
 `;
 
 // ─── Base UI ──────────────────────────────────────────────────────────────────
@@ -1947,6 +1981,12 @@ export default function App() {
   const [modalTask, setModalTask] = useState<Task | "new" | null>(null);
   const [drawerTask, setDrawerTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const navigateToPage = (p: AppPage) => {
+    setPage(p);
+    setMobileSidebarOpen(false);
+  };
 
   const handleLogoClick = useCallback(() => {
     if (appState === "app") {
@@ -2171,9 +2211,14 @@ export default function App() {
         {appState === "register" && <RegisterPage onRegister={() => setAppState("app")} onGoLogin={() => setAppState("login")} theme={theme} onLogoClick={handleLogoClick} />}
 
         {appState === "app" && (
-          <div className="flex h-screen overflow-hidden">
+          <div className="flex h-screen overflow-hidden relative">
+            {/* Sidebar backdrop overlay on mobile */}
+            {mobileSidebarOpen && (
+              <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm sidebar-overlay" onClick={() => setMobileSidebarOpen(false)} />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-52 shrink-0 flex flex-col h-full" style={{ background: colors.sidebarBg, borderRight: `1px solid ${colors.border}`, backdropFilter: "blur(20px)" }}>
+            <aside className={`w-52 shrink-0 flex flex-col h-full dashboard-sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`} style={{ background: colors.sidebarBg, borderRight: `1px solid ${colors.border}`, backdropFilter: "blur(20px)" }}>
               <div style={{ padding: "22px 18px 14px" }}>
                 <div onClick={handleLogoClick} className="cursor-pointer cursor-target" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                   <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg, #00ffa3, #6e00ff)", boxShadow: "0 0 12px rgba(0,255,163,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2185,10 +2230,10 @@ export default function App() {
               </div>
 
               <nav style={{ flex: 1, padding: "0 9px", display: "flex", flexDirection: "column", gap: 2 }}>
-                <NavItem icon={LayoutGrid} label="My Tasks"  active={page === "board"}     onClick={() => setPage("board")} theme={theme} />
-                <NavItem icon={BarChart2}  label="Overview"  active={page === "stats"}     onClick={() => setPage("stats")} theme={theme} />
-                <NavItem icon={PieChart}   label="Analytics" active={page === "analytics"} onClick={() => setPage("analytics")} theme={theme} />
-                <NavItem icon={Settings}   label="Settings"  active={page === "settings"}  onClick={() => setPage("settings")} theme={theme} />
+                <NavItem icon={LayoutGrid} label="My Tasks"  active={page === "board"}     onClick={() => navigateToPage("board")} theme={theme} />
+                <NavItem icon={BarChart2}  label="Overview"  active={page === "stats"}     onClick={() => navigateToPage("stats")} theme={theme} />
+                <NavItem icon={PieChart}   label="Analytics" active={page === "analytics"} onClick={() => navigateToPage("analytics")} theme={theme} />
+                <NavItem icon={Settings}   label="Settings"  active={page === "settings"}  onClick={() => navigateToPage("settings")} theme={theme} />
               </nav>
 
               <div style={{ padding: "10px 9px 14px" }}>
@@ -2213,21 +2258,38 @@ export default function App() {
               </div>
             </aside>
 
-            {/* Main */}
-            <main className="flex-1 overflow-y-auto p-8">
-              {loading ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-                  <Spinner />
+            {/* Main content area */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              {/* Mobile top header bar */}
+              <div className="mobile-header flex items-center justify-between p-4 md:hidden" style={{ background: colors.sidebarBg, borderBottom: `1px solid ${colors.border}` }}>
+                <button onClick={() => setMobileSidebarOpen(true)} style={{ background: "none", border: "none", color: colors.text, cursor: "pointer", display: "flex", alignItems: "center" }} title="Open menu">
+                  <Menu size={20} />
+                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, background: "linear-gradient(135deg, #00ffa3, #6e00ff)", display: "flex", alignItems: "center", justifyContent: "center" }}><Zap size={10} style={{ color: "#0b0f19" }} /></div>
+                  <span className="gradient-logo-text" style={{ fontSize: 13, background: isDark ? "linear-gradient(90deg, #fff, #00ffa3)" : "linear-gradient(90deg, #0f172a, #6e00ff)" }}>EdgeBoard</span>
                 </div>
-              ) : (
-                <>
-                  {page === "board"     && <TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onOpenCreate={() => setModalTask("new")} onOpenEdit={openEdit} onOpenDetail={t => setDrawerTask(t)} theme={theme} />}
-                  {page === "stats"     && <DashboardStats tasks={tasks} theme={theme} />}
-                  {page === "analytics" && <AnalyticsPage  tasks={tasks} theme={theme} />}
-                  {page === "settings"  && <SettingsPage   onLogout={handleLogout} onDeleteCompleted={handleDeleteCompleted} theme={theme} />}
-                </>
-              )}
-            </main>
+                <button onClick={toggleTheme} style={{ background: "none", border: "none", color: colors.subtext, cursor: "pointer", display: "flex", alignItems: "center" }} title="Toggle theme">
+                  {isDark ? <Sun size={15} style={{ color: "#f59e0b" }} /> : <Moon size={15} style={{ color: "#6e00ff" }} />}
+                </button>
+              </div>
+
+              {/* Main */}
+              <main className="flex-1 overflow-y-auto p-8 main-content">
+                {loading ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+                    <Spinner />
+                  </div>
+                ) : (
+                  <>
+                    {page === "board"     && <TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onOpenCreate={() => setModalTask("new")} onOpenEdit={openEdit} onOpenDetail={t => setDrawerTask(t)} theme={theme} />}
+                    {page === "stats"     && <DashboardStats tasks={tasks} theme={theme} />}
+                    {page === "analytics" && <AnalyticsPage  tasks={tasks} theme={theme} />}
+                    {page === "settings"  && <SettingsPage   onLogout={handleLogout} onDeleteCompleted={handleDeleteCompleted} theme={theme} />}
+                  </>
+                )}
+              </main>
+            </div>
           </div>
         )}
       </div>
