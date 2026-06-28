@@ -29,18 +29,29 @@ const handleResponse = async (response: Response) => {
 };
 
 export const mapTaskFromBackend = (t: any): Task => {
+  // Defensive normalization of category: map 'client' from DB if present, default to 'work'
+  let dbCategory = 'work';
+  if (t.client) {
+    const rawClient = t.client.toLowerCase();
+    if (['work', 'personal', 'health', 'learning', 'finance', 'creative'].includes(rawClient)) {
+      dbCategory = rawClient;
+    }
+  }
+  
   return {
     id: t._id || t.id,
-    title: t.title,
-    category: (t.client || 'work') as any,
-    priority: t.priority,
-    status: t.status,
+    title: t.title || 'Untitled Task',
+    category: dbCategory as any,
+    priority: t.priority || 'medium',
+    status: t.status || 'pending',
     dueDate: t.dueDate || '',
     tags: t.tags || [],
     description: t.description || '',
     activity: t.activity || [],
     createdAt: t.createdAt,
-    updatedAt: t.updatedAt
+    updatedAt: t.updatedAt,
+    timeTracked: t.timeTracked || 0,
+    timerStartedAt: t.timerStartedAt || ''
   };
 };
 

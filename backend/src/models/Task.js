@@ -74,6 +74,14 @@ const taskSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
+    timeTracked: {
+      type: Number,
+      default: 0
+    },
+    timerStartedAt: {
+      type: String,
+      default: ''
+    },
     assigneeIds: {
       type: [String],
       default: []

@@ -1,29 +1,35 @@
-# COLL-EDGE CONNECT | Task Tracker Web Application
+# EDGEBOARD | Task Tracker Web Application
 
-A premium, high-fidelity Task Tracker Web Application built with the **MERN Stack** (MongoDB, Express, React, Node.js). This project is submitted as part of the Technical Assignment for the **Full Stack Developer Intern** position.
+A premium, high-fidelity Task Tracker Web Application built with the **MERN Stack** (MongoDB, Express, React, Node.js). This project is built as a state-of-the-art task management portal with complete user scoping, real-time analytics, and visual time-tracking mechanics.
 
 ---
 
 ## 🌟 Key Features
 
-- **Full CRUD Operations**: Create, view, update, and delete tasks dynamically with instantaneous frontend updates and zero page refreshes.
-- **Form Validation**: Strict client-side validation for character lengths, mandatory inputs, and date checks, coupled with corresponding Mongoose database-level schema constraints.
-- **REST APIs**: Structured RESTful endpoints for listing, creating, reading, updating, and deleting tasks.
-- **Advanced Query Parameters**:
-  - **Dynamic Search**: Instantly filter tasks by typing into the search bar (searches both title and description).
-  - **Status Filters**: Filter tasks by status (`Pending`, `In Progress`, `Completed`).
-  - **Priority Filters**: Filter tasks by priority (`Low`, `Medium`, `High`).
-  - **Sorting**: Sort tasks by creation date, due date, or priority in ascending/descending order.
-- **Performance Optimizations**: Implemented a **search input debounce (400ms)** to prevent excessive API requests to the backend while typing.
-- **Interactive Analytics Dashboard**: A dedicated dashboard tab with visual metrics representing:
-  - Total tasks count.
-  - Count of pending tasks.
-  - Count of tasks currently in progress.
-  - Completed task aggregates.
-  - Real-time **Overdue** tracker highlighting task deadlines.
-- **Premium Glassmorphic UI**: Highly responsive, responsive layouts, smooth hover animations, dark-themed styling, and clean icons.
-- **Floating Toast Notifications**: Contextual success, information, and error notifications for CRUD events.
-- **Single-command Coordination**: Integrated workspaces using a root-level `package.json` to boot up the backend and frontend concurrently.
+- **User Authentication & Session Scoping**:
+  - Secure login and registration flows with validation and feedback.
+  - User initials auto-generation (`AR`, `VW`, etc.) displayed in the premium sidebar.
+  - Multi-user data isolation: tasks are strictly filtered and queried by user email via dynamic request headers (`X-User-Email`).
+  - Rotated `Back to Home` navigation links to easily jump between login, signup, and the landing page.
+- **Task Timer & Productivity Analytics**:
+  - Real-time **Start/Stop active timers** directly on the task cards.
+  - Visual blinking indicators and live counting formats (`00h 00m 00s`) for active tasks.
+  - Tracked time is saved directly to MongoDB in milliseconds, preventing data loss.
+  - Safeguarded against edits: updating task descriptions/due dates preserves accumulated time metrics.
+- **Interactive Analytics Dashboard**:
+  - **Tasks by Status Distribution**: Interactive Recharts Pie chart outlining task status shares.
+  - **Tasks by Category**: Bar charts plotting total tasks against completed counts per category.
+  - **Productive Hours spent by Category**: Live bar chart mapping total cumulative tracked hours per category that updates dynamically in real-time.
+  - **Weekly Task Volume & Trends**: Trend lines tracking backlog counts vs. completed task speeds.
+- **Advanced Query Filters & Debouncing**:
+  - **Dynamic Search**: Filter tasks by title or description with a 400ms debounce on keystrokes.
+  - **Status, Category, & Priority Filters**: Clean inline dropdown components to slice and dice your board.
+- **Premium User Interface (Aesthetics)**:
+  - Custom fluid neon cursor follow-animation.
+  - Glassmorphic spotlight cards (`SpotlightCard`), glowing buttons, and hover state transitions.
+  - Smooth light/dark theme toggle shifting the page from a deep space canvas to a crisp light layout.
+- **Auto-Seeding**:
+  - Includes a backend database seeding mechanism (`seed.js`) that boots default tasks for first-time developers when the task collection is empty.
 
 ---
 
@@ -34,11 +40,12 @@ Task Tracker/
 ├── backend/
 │   ├── src/
 │   │   ├── config/
-│   │   │   └── db.js            # MongoDB database connection
+│   │   │   ├── db.js            # MongoDB database connection
+│   │   │   └── seed.js          # Auto-seeding mock tasks script
 │   │   ├── controllers/
-│   │   │   └── taskController.js# Express controllers (CRUD, filter, sort logic)
+│   │   │   └── taskController.js# CRUD controllers (user scoping, filter, sort logic)
 │   │   ├── models/
-│   │   │   └── Task.js          # Mongoose schema and database validation
+│   │   │   └── Task.js          # Mongoose schema (client, timeTracked, timerStartedAt)
 │   │   ├── routes/
 │   │   │   └── taskRoutes.js    # REST endpoints mapping
 │   │   └── server.js            # Express entry point
@@ -49,22 +56,21 @@ Task Tracker/
 │   ├── src/
 │   │   ├── assets/              # Standard static assets
 │   │   ├── components/
-│   │   │   ├── DashboardStats.jsx # Analytics metric cards
-│   │   │   ├── FilterSortControls.jsx # Controls toolbar (search, sort, filter)
-│   │   │   ├── TaskCard.jsx       # Individual task rendering
-│   │   │   └── TaskFormModal.jsx  # Creation and Editing modal with validation
+│   │   │   └── TargetCursor/    # Neon pointer follow animation
 │   │   ├── services/
-│   │   │   └── api.js           # API fetch wrappers
-│   │   ├── App.css              # Unused styles placeholder
-│   │   ├── App.jsx              # Main React controller
-│   │   ├── index.css            # Custom CSS variables, typography, layouts
-│   │   └── main.jsx             # React entry point
+│   │   │   └── api.ts           # Axios client & request headers configuration
+│   │   ├── styles/
+│   │   │   ├── theme.css        # Color scheme variables
+│   │   │   └── tailwind.css     # Tailwind v4 import
+│   │   ├── app/
+│   │   │   └── App.tsx          # Main React Single-Page Application (Landing, Auth, Dashboard, Analytics, Board)
+│   │   └── main.tsx             # React entry point
 │   ├── .env                     # Frontend environment variables
-│   ├── .env.example             # Frontend environment template
-│   ├── index.html               # HTML container (SEO optimized title/meta tags)
+│   ├── index.html               # HTML entry container (SEO optimized tags)
+│   ├── vite.config.ts           # Vite + Tailwind compiler plugins
 │   └── package.json             # Frontend dependencies
 ├── package.json                 # Root script coordinator
-└── README.md                    # Project submission guide
+└── README.md                    # Project documentation
 ```
 
 ---
@@ -72,73 +78,74 @@ Task Tracker/
 ## ⚙️ Environment Configurations
 
 ### Backend Settings (`backend/.env`)
-Create a file named `.env` in the `backend/` directory with the following variables:
+Create a `.env` file in the `backend/` directory:
 ```env
 PORT=5000
 MONGODB_URI=mongodb://127.0.0.1:27017/tasktracker
 NODE_ENV=development
 ```
-*Note: If `MONGODB_URI` is omitted, the app will fall back to local MongoDB (`mongodb://127.0.0.1:27017/tasktracker`).*
+*If `MONGODB_URI` is omitted, the server automatically defaults to `mongodb://127.0.0.1:27017/tasktracker`.*
 
 ### Frontend Settings (`frontend/.env`)
-Create a file named `.env` in the `frontend/` directory:
+Create a `.env` file in the `frontend/` directory:
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
-*Note: If `VITE_API_URL` is omitted, the frontend will automatically direct requests to `http://localhost:5000/api`.*
 
 ---
 
 ## 🚀 Running the Application Locally
 
-Follow these three steps to run both the frontend and backend concurrently:
+Follow these steps to set up the development workspace:
 
-### 1. Clone the repository and navigate to the project directory
+### 1. Navigate to the project directory
 ```bash
 cd "Task Tracker"
 ```
 
 ### 2. Install all dependencies
-You can install dependencies for the root coordinator, backend, and frontend at once:
+Installs the concurrent runner for workspaces and subproject dependencies:
 ```bash
-# Install root developer tools (concurrently)
+# Install root workspaces dependencies
 npm install
 
-# Installs subproject dependencies inside both client and server folders
+# Installs subproject dependencies for backend & frontend
 npm run install-all
 ```
 
-### 3. Spin up both local servers
-Launch the application:
+### 3. Start local development servers
 ```bash
 npm run dev
 ```
 - **Backend API Server**: Runs on [http://localhost:5000](http://localhost:5000)
-- **Frontend App client**: Runs on [http://localhost:5173](http://localhost:5173)
+- **Frontend App Client**: Runs on [http://localhost:5174](http://localhost:5174) (auto-fallback if port 5173 is occupied)
 
 ---
 
 ## 🔌 REST API Documentation
 
-All requests support and expect JSON body inputs.
+All request endpoints expect and return JSON. Endpoints are secured by the **`X-User-Email`** header for secure multi-tenant isolation.
 
-| Method | Endpoint | Description | Query Parameters (Optional) |
+| Method | Endpoint | Description | Expected Headers / Query Params |
 | :--- | :--- | :--- | :--- |
-| **GET** | `/api/tasks` | Fetch list of tasks | `search` (text), `status` (`pending` / `in-progress` / `completed`), `priority` (`low` / `medium` / `high`), `sortBy` (`createdAt` / `dueDate` / `priority`), `sortOrder` (`asc` / `desc`) |
-| **GET** | `/api/tasks/:id` | Get details of a single task | None |
-| **POST** | `/api/tasks` | Create a new task document | Requires JSON body |
-| **PUT** | `/api/tasks/:id` | Update properties of an existing task | Requires JSON body |
-| **DELETE**| `/api/tasks/:id` | Permanently remove a task document | None |
+| **GET** | `/api/tasks` | Fetch list of tasks | Header: `X-User-Email` <br> Query: `search`, `status`, `priority`, `sortBy`, `sortOrder` |
+| **GET** | `/api/tasks/:id` | Get details of a single task | Header: `X-User-Email` |
+| **POST** | `/api/tasks` | Create a new task document | Header: `X-User-Email` <br> Body: JSON |
+| **PUT** | `/api/tasks/:id` | Update properties of a task | Header: `X-User-Email` <br> Body: JSON |
+| **DELETE**| `/api/tasks/:id` | Delete task document | Header: `X-User-Email` |
 
-### Task Schema Details (JSON)
-When creating (`POST`) or updating (`PUT`) a task, pass the following JSON format:
+### Task Model Sample Structure (JSON)
 ```json
 {
-  "title": "Build user auth API",
-  "description": "Develop signup and signin handlers using bcrypt and JWT.",
+  "title": "Build Real-time Analytics Tracker",
+  "client": "creative",
+  "description": "Implement Recharts visualization for productive time tracked by category.",
   "status": "in-progress",
   "priority": "high",
-  "dueDate": "2026-07-05T00:00:00.000Z"
+  "dueDate": "2026-07-01",
+  "tags": ["frontend", "charts", "analytics"],
+  "timeTracked": 3600000,
+  "timerStartedAt": "2026-06-28T15:00:00.000Z"
 }
 ```
 
@@ -147,16 +154,16 @@ When creating (`POST`) or updating (`PUT`) a task, pass the following JSON forma
 ## 🌐 Deployment Guidelines
 
 ### Backend Deployment (e.g. Render / Railway / Heroku)
-1. Set the root directory of the build to `backend` or use the subfolder.
+1. Set the root directory of the build to `backend`.
 2. Build Command: `npm install`
-3. Start Command: `npm start`
-4. Set environment variables on the hosting platform:
-   - `PORT`: `10000` (or whatever the host provides)
+3. Start Command: `node src/server.js`
+4. Set platform environment variables:
+   - `PORT`: `10000` (or provided port)
    - `MONGODB_URI`: Connect to a MongoDB Atlas cluster URI.
    - `NODE_ENV`: `production`
 
 ### Frontend Deployment (e.g. Vercel / Netlify)
-1. Connect your GitHub repository to Vercel/Netlify.
+1. Connect the GitHub repository to the platform.
 2. Set the root directory to `frontend`.
 3. Build Command: `npm run build`
 4. Output Directory: `dist`

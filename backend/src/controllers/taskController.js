@@ -76,7 +76,7 @@ export const getTaskById = async (req, res) => {
 // @access  Public (Secured by X-User-Email header)
 export const createTask = async (req, res) => {
   try {
-    const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity } = req.body;
+    const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity, timeTracked, timerStartedAt } = req.body;
     const userEmail = req.headers['x-user-email'];
 
     if (!userEmail) {
@@ -98,7 +98,9 @@ export const createTask = async (req, res) => {
       dueDate,
       tags: tags || [],
       assigneeIds: assigneeIds || [],
-      activity: activity || []
+      activity: activity || [],
+      timeTracked: timeTracked || 0,
+      timerStartedAt: timerStartedAt || ''
     });
 
     const savedTask = await newTask.save();
@@ -117,7 +119,7 @@ export const createTask = async (req, res) => {
 // @access  Public (Secured by X-User-Email header)
 export const updateTask = async (req, res) => {
   try {
-    const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity } = req.body;
+    const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity, timeTracked, timerStartedAt } = req.body;
     const userEmail = req.headers['x-user-email'];
 
     if (!userEmail) {
@@ -140,6 +142,8 @@ export const updateTask = async (req, res) => {
     if (tags !== undefined) task.tags = tags;
     if (assigneeIds !== undefined) task.assigneeIds = assigneeIds;
     if (activity !== undefined) task.activity = activity;
+    if (timeTracked !== undefined) task.timeTracked = timeTracked;
+    if (timerStartedAt !== undefined) task.timerStartedAt = timerStartedAt;
 
     const updatedTask = await task.save();
     res.status(200).json(updatedTask);
