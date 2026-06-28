@@ -362,7 +362,7 @@ function LoginPage({ onLogin, onGoRegister, theme = "dark", onLogoClick }: { onL
 
   const handleGoogleSignIn = () => {
     const origin = window.location.origin;
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+    const clientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID").trim();
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${origin}&response_type=token&scope=email profile`;
     window.location.href = url;
   };
@@ -426,10 +426,17 @@ function LoginPage({ onLogin, onGoRegister, theme = "dark", onLogoClick }: { onL
         </div>
 
         <SpotlightCard className="p-8" glowColor="#00ffa3" theme={theme}>
-          <div className="flex gap-3 mb-6">
-            <button onClick={handleGoogleSignIn} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+          <div className="flex flex-col gap-3 mb-6">
+            <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer"
               style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.04)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(15,23,42,0.1)"}`, color: isDark ? "#cbd5e1" : "#334155", fontFamily: "'DM Sans', sans-serif" }}>
-              <Chrome size={15} /> Google
+              <Chrome size={15} /> Sign in with Google
+            </button>
+            <button onClick={() => {
+              const origin = window.location.origin;
+              window.location.href = `${origin}/#access_token=mock_google_token&email=jordan@colledge.in&name=Jordan+Lee`;
+            }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+              style={{ background: "rgba(0, 255, 163, 0.06)", border: "1px dashed rgba(0, 255, 163, 0.3)", color: "#00ffa3", fontFamily: "'DM Sans', sans-serif" }}>
+              <Zap size={14} /> Bypass with Mock Google Login
             </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>

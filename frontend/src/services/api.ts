@@ -1,6 +1,6 @@
 import { Task } from '../app/App';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').trim();
 
 const getUserEmail = (): string => {
   return localStorage.getItem('user_email') || '';
