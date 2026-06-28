@@ -243,23 +243,48 @@ function Avatar({ assignee, size = 28 }: { assignee: Assignee; size?: number }) 
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
-function LoginPage({ onLogin }: { onLogin: (email: string, name: string) => void }) {
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [googleEmail, setGoogleEmail] = useState("");
-  const [googleName, setGoogleName] = useState("");
-  const [loginError, setLoginError] = useState("");
+function LoginPage({ onLogin, onGoRegister }: { onLogin: (email: string, name: string) => void; onGoRegister: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
 
-  const handleLoginSubmit = () => {
-    if (!googleEmail.trim()) {
-      setLoginError("Google email is required");
-      return;
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!email.trim()) e.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email)) e.email = "Enter a valid email address";
+    if (!password) e.password = "Password is required";
+    return e;
+  };
+
+  const handleManualLogin = async () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setLoading(true);
+    setSubmitError("");
+    try {
+      const res = await authService.login(email.trim(), password);
+      setLoading(false);
+      onLogin(res.email, res.name);
+    } catch (err: any) {
+      setLoading(false);
+      setSubmitError(err.message || "Invalid credentials");
     }
-    if (!/\S+@\S+\.\S+/.test(googleEmail)) {
-      setLoginError("Please enter a valid Google email");
-      return;
+  };
+
+  const handleGoogleOAuth = () => {
+    const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (GOOGLE_CLIENT_ID) {
+      const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin)}&response_type=token&scope=${encodeURIComponent("email profile")}`;
+      window.location.href = oauthUrl;
+    } else {
+      console.warn("VITE_GOOGLE_CLIENT_ID is not configured. Simulating Google OAuth redirect.");
+      const mockEmail = "jordan@colledge.in";
+      const mockName = "Jordan Lee";
+      window.location.href = `${window.location.origin}/#access_token=mock_google_token&email=${encodeURIComponent(mockEmail)}&name=${encodeURIComponent(mockName)}`;
     }
-    const name = googleName.trim() || googleEmail.split("@")[0];
-    onLogin(googleEmail.trim(), name);
   };
 
   const inputStyle = (hasErr: boolean): React.CSSProperties => ({
@@ -279,72 +304,62 @@ function LoginPage({ onLogin }: { onLogin: (email: string, name: string) => void
             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", background: "linear-gradient(90deg, #fff, #00ffa3)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>EdgeBoard</span>
           </div>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-1px", marginBottom: 6 }}>Welcome back</h1>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", fontSize: 14 }}>Sign in to your agency dashboard</p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", fontSize: 14 }}>Sign in to your personal dashboard</p>
         </div>
 
         <SpotlightCard className="p-8" glowColor="#00ffa3">
-          {!showPrompt ? (
-            <div className="flex flex-col gap-4">
-              <button 
-                onClick={() => setShowPrompt(true)}
-                className="flex items-center justify-center gap-3 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-                style={{ background: "#fff", color: "#0b0f19", border: "1px solid #fff", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 0 20px rgba(255,255,255,0.15)" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.9h6.6c-.28 1.48-1.12 2.73-2.38 3.58v3h3.84c2.25-2.07 3.54-5.12 3.54-8.73z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.84-3c-1.07.72-2.44 1.16-4.12 1.16-3.17 0-5.85-2.14-6.81-5.02H1.24v3.1A12 12 0 0 0 12 24z"/>
-                  <path fill="#FBBC05" d="M5.19 14.23A7.17 7.17 0 0 1 4.8 12c0-.79.13-1.57.39-2.32V6.58H1.24A11.96 11.96 0 0 0 0 12c0 2.03.52 4 1.24 5.72l3.95-3.49z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.96 1.19 15.24 0 12 0 7.24 0 3.19 2.72 1.24 6.58l3.95 3.49c.96-2.88 3.64-5.32 6.81-5.32z"/>
-                </svg>
-                Sign In with Google
-              </button>
+          <div className="flex flex-col gap-4">
+            <div>
+              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Email</label>
+              <input style={inputStyle(!!errors.email)} type="email" placeholder="you@personal.com" value={email} onChange={e => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: "" })); }} />
+              {errors.email && <p style={{ color: "#f43f5e", fontSize: 12, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{errors.email}</p>}
             </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, color: "#fff", fontWeight: 700, marginBottom: 8 }}>Google Account Sign-In</h2>
-              
-              <div>
-                <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Google Email</label>
-                <input 
-                  style={inputStyle(!!loginError)} 
-                  type="email" 
-                  placeholder="user@gmail.com" 
-                  value={googleEmail} 
-                  onChange={e => { setGoogleEmail(e.target.value); setLoginError(""); }} 
-                />
-              </div>
 
-              <div>
-                <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Full Name</label>
-                <input 
-                  style={inputStyle(false)} 
-                  type="text" 
-                  placeholder="John Doe" 
-                  value={googleName} 
-                  onChange={e => setGoogleName(e.target.value)} 
-                />
-              </div>
-
-              {loginError && <p style={{ color: "#f43f5e", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{loginError}</p>}
-              
-              <div className="flex gap-2 mt-2">
-                <button 
-                  type="button"
-                  onClick={() => setShowPrompt(false)}
-                  className="flex-1 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1", fontFamily: "'DM Sans', sans-serif" }}>
-                  Back
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleLoginSubmit}
-                  className="flex-1 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer"
-                  style={{ background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 20px rgba(0,255,163,0.2)", fontFamily: "'DM Sans', sans-serif" }}>
-                  Authenticate
+            <div>
+              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Password</label>
+              <div style={{ position: "relative" }}>
+                <input style={{ ...inputStyle(!!errors.password), paddingRight: 44 }} type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: "" })); }}
+                  onKeyDown={e => e.key === "Enter" && handleManualLogin()} />
+                <button onClick={() => setShowPass(v => !v)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b", background: "none", border: "none", cursor: "pointer" }}>
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {errors.password && <p style={{ color: "#f43f5e", fontSize: 12, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{errors.password}</p>}
             </div>
-          )}
+
+            {submitError && <p style={{ color: "#f43f5e", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{submitError}</p>}
+
+            <button onClick={handleManualLogin} disabled={loading}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] disabled:opacity-70 disabled:scale-100 cursor-pointer"
+              style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 24px rgba(0,255,163,0.3)", marginTop: 4 }}>
+              {loading ? <><Spinner /> Signing in…</> : <>Sign In <ArrowRight size={15} /></>}
+            </button>
+
+            <div className="flex items-center gap-3 my-2">
+              <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em" }}>OR</span>
+              <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+            </div>
+
+            <button 
+              onClick={handleGoogleOAuth}
+              className="flex items-center justify-center gap-3 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+              style={{ background: "rgba(255,255,255,0.06)", color: "#cbd5e1", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "'DM Sans', sans-serif" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.9h6.6c-.28 1.48-1.12 2.73-2.38 3.58v3h3.84c2.25-2.07 3.54-5.12 3.54-8.73z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.84-3c-1.07.72-2.44 1.16-4.12 1.16-3.17 0-5.85-2.14-6.81-5.02H1.24v3.1A12 12 0 0 0 12 24z"/>
+                <path fill="#FBBC05" d="M5.19 14.23A7.17 7.17 0 0 1 4.8 12c0-.79.13-1.57.39-2.32V6.58H1.24A11.96 11.96 0 0 0 0 12c0 2.03.52 4 1.24 5.72l3.95-3.49z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.96 1.19 15.24 0 12 0 7.24 0 3.19 2.72 1.24 6.58l3.95 3.49c.96-2.88 3.64-5.32 6.81-5.32z"/>
+              </svg>
+              Sign In with Google
+            </button>
+          </div>
         </SpotlightCard>
+
+        <p style={{ textAlign: "center", color: "#64748b", fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginTop: 20 }}>
+          Don't have an account?{" "}
+          <button onClick={onGoRegister} style={{ color: "#00ffa3", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>Create one →</button>
+        </p>
       </div>
     </div>
   );
@@ -352,12 +367,13 @@ function LoginPage({ onLogin }: { onLogin: (email: string, name: string) => void
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
-function RegisterPage({ onRegister, onGoLogin }: { onRegister: () => void; onGoLogin: () => void }) {
+function RegisterPage({ onRegister, onGoLogin }: { onRegister: (email: string, name: string) => void; onGoLogin: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "", terms: false });
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -365,18 +381,26 @@ function RegisterPage({ onRegister, onGoLogin }: { onRegister: () => void; onGoL
     if (!form.email.trim()) e.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
     if (!form.password) e.password = "Password is required";
-    else if (form.password.length < 8) e.password = "Minimum 8 characters";
+    else if (form.password.length < 6) e.password = "Minimum 6 characters";
     if (!form.confirm) e.confirm = "Please confirm your password";
     else if (form.confirm !== form.password) e.confirm = "Passwords do not match";
     if (!form.terms) e.terms = "You must accept the terms";
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setLoading(true);
-    setTimeout(() => { setLoading(false); onRegister(); }, 1600);
+    setSubmitError("");
+    try {
+      await authService.register(form.name, form.email, form.password);
+      setLoading(false);
+      onRegister(form.email, form.name);
+    } catch (err: any) {
+      setLoading(false);
+      setSubmitError(err.message || "Registration failed. Try again.");
+    }
   };
 
   const inputStyle = (hasErr: boolean): React.CSSProperties => ({
@@ -399,20 +423,20 @@ function RegisterPage({ onRegister, onGoLogin }: { onRegister: () => void; onGoL
             <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", background: "linear-gradient(90deg, #fff, #00ffa3)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>EdgeBoard</span>
           </div>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: "-1px", marginBottom: 6 }}>Create your account</h1>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", fontSize: 14 }}>Join your team on EdgeBoard</p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#64748b", fontSize: 14 }}>Get started with your personal board</p>
         </div>
 
         <SpotlightCard className="p-8" glowColor="#6e00ff">
           <div className="flex flex-col gap-4">
             <div>
               <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Full Name</label>
-              <input style={inputStyle(!!errors.name)} placeholder="Alex Rivera" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <input style={inputStyle(!!errors.name)} placeholder="John Doe" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
               <FieldErr k="name" />
             </div>
 
             <div>
               <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Email</label>
-              <input style={inputStyle(!!errors.email)} type="email" placeholder="you@agency.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <input style={inputStyle(!!errors.email)} type="email" placeholder="you@personal.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
               <FieldErr k="email" />
             </div>
 
@@ -454,8 +478,10 @@ function RegisterPage({ onRegister, onGoLogin }: { onRegister: () => void; onGoL
               <FieldErr k="terms" />
             </div>
 
+            {submitError && <p style={{ color: "#f43f5e", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{submitError}</p>}
+
             <button onClick={handleSubmit} disabled={loading}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] disabled:opacity-70 disabled:scale-100"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] disabled:opacity-70 disabled:scale-100 cursor-pointer"
               style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 24px rgba(0,255,163,0.3)", marginTop: 4 }}>
               {loading ? <><Spinner /> Creating account…</> : <>Create Account <ArrowRight size={15} /></>}
             </button>
@@ -476,20 +502,17 @@ function RegisterPage({ onRegister, onGoLogin }: { onRegister: () => void; onGoL
 function TaskModal({ initial, onClose, onSave }: { initial?: Task; onClose: () => void; onSave: (t: Task) => void }) {
   const [form, setForm] = useState({
     title: initial?.title ?? "",
-    client: initial?.client ?? "",
     description: initial?.description ?? "",
     priority: (initial?.priority ?? "medium") as Priority,
     status: (initial?.status ?? "pending") as Status,
     dueDate: initial?.dueDate ?? "",
     tags: initial?.tags.join(", ") ?? "",
-    assigneeIds: initial?.assigneeIds ?? [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.title.trim()) e.title = "Task title is required";
-    if (!form.client.trim()) e.client = "Client is required";
     if (!form.dueDate) e.dueDate = "Due date is required";
     return e;
   };
@@ -499,17 +522,13 @@ function TaskModal({ initial, onClose, onSave }: { initial?: Task; onClose: () =
     if (Object.keys(e).length) { setErrors(e); return; }
     onSave({
       id: initial?.id ?? `t${Date.now()}`,
-      title: form.title, client: form.client, description: form.description,
+      title: form.title, client: "", description: form.description,
       priority: form.priority, status: form.status, dueDate: form.dueDate,
       tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
-      assigneeIds: form.assigneeIds,
+      assigneeIds: [],
       activity: initial?.activity ?? [{ id: `ac${Date.now()}`, type: "created", user: "You", time: "just now", message: "Task created." }],
     });
     onClose();
-  };
-
-  const toggleAssignee = (id: string) => {
-    setForm(f => ({ ...f, assigneeIds: f.assigneeIds.includes(id) ? f.assigneeIds.filter(a => a !== id) : [...f.assigneeIds, id] }));
   };
 
   const inputCls: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", padding: "10px 14px", fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" };
@@ -533,18 +552,11 @@ function TaskModal({ initial, onClose, onSave }: { initial?: Task; onClose: () =
             {errors.title && <p style={{ color: "#f43f5e", fontSize: 11, marginTop: 3 }}>{errors.title}</p>}
           </div>
 
-          {/* Client + Due */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 5 }}>Client *</label>
-              <input style={{ ...inputCls, ...errBorder("client") }} placeholder="e.g. NovaBrand" value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} />
-              {errors.client && <p style={{ color: "#f43f5e", fontSize: 11, marginTop: 3 }}>{errors.client}</p>}
-            </div>
-            <div>
-              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 5 }}>Due Date *</label>
-              <input type="date" style={{ ...inputCls, colorScheme: "dark", ...errBorder("dueDate") }} value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
-              {errors.dueDate && <p style={{ color: "#f43f5e", fontSize: 11, marginTop: 3 }}>{errors.dueDate}</p>}
-            </div>
+          {/* Due Date */}
+          <div>
+            <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 5 }}>Due Date *</label>
+            <input type="date" style={{ ...inputCls, colorScheme: "dark", ...errBorder("dueDate") }} value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
+            {errors.dueDate && <p style={{ color: "#f43f5e", fontSize: 11, marginTop: 3 }}>{errors.dueDate}</p>}
           </div>
 
           {/* Priority + Status */}
@@ -574,35 +586,16 @@ function TaskModal({ initial, onClose, onSave }: { initial?: Task; onClose: () =
           {/* Tags */}
           <div>
             <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 5 }}>Tags (comma-separated)</label>
-            <input style={inputCls} placeholder="social, design, video" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} />
-          </div>
-
-          {/* Assignees */}
-          <div>
-            <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Assignees</label>
-            <div className="flex flex-wrap gap-2">
-              {ASSIGNEES.map(a => {
-                const sel = form.assigneeIds.includes(a.id);
-                return (
-                  <button key={a.id} onClick={() => toggleAssignee(a.id)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200"
-                    style={{ background: sel ? `${a.color}18` : "rgba(255,255,255,0.04)", border: `1.5px solid ${sel ? a.color + "60" : "rgba(255,255,255,0.08)"}`, cursor: "pointer" }}>
-                    <Avatar assignee={a} size={22} />
-                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: sel ? "#fff" : "#64748b" }}>{a.name}</span>
-                    {sel && <CheckCircle size={12} style={{ color: a.color }} />}
-                  </button>
-                );
-              })}
-            </div>
+            <input style={inputCls} placeholder="personal, coding, reading" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} />
           </div>
         </div>
 
         <div className="flex gap-3 mt-7">
-          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02]"
+          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
             style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 20px rgba(0,255,163,0.25)" }}>
             {initial ? "Save Changes" : "Create Task"}
           </button>
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02]"
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
             style={{ fontFamily: "'DM Sans', sans-serif", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1" }}>
             Cancel
           </button>
@@ -654,7 +647,6 @@ function TaskDrawer({ task, onClose, onEdit, onStatusChange }: { task: Task; onC
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { icon: User,     label: "Client",   value: task.client },
               { icon: Calendar, label: "Due Date",  value: formatDate(task.dueDate) },
               { icon: Tag,      label: "Tags",      value: task.tags.length ? task.tags.map(t => `#${t}`).join(" ") : "—" },
             ].map(({ icon: Icon, label, value }) => (
@@ -663,17 +655,6 @@ function TaskDrawer({ task, onClose, onEdit, onStatusChange }: { task: Task; onC
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#cbd5e1" }}>{value}</p>
               </div>
             ))}
-
-            {/* Assignees */}
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "10px 12px" }}>
-              <div className="flex items-center gap-1.5 mb-2"><UserCheck size={11} style={{ color: "#64748b" }} /><span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>Assignees</span></div>
-              <div className="flex flex-wrap gap-1">
-                {task.assigneeIds.length ? task.assigneeIds.map(id => {
-                  const a = getAssignee(id);
-                  return a ? <Avatar key={id} assignee={a} size={24} /> : null;
-                }) : <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: "#64748b" }}>Unassigned</span>}
-              </div>
-            </div>
           </div>
 
           {/* Description */}
@@ -761,8 +742,6 @@ function TaskCard({ task, onStatusChange, onOpen, onEdit }: { task: Task; onStat
         </div>
 
         <div className="flex items-center gap-2 mb-3">
-          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#64748b" }}>{task.client}</span>
-          <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
           <Clock size={11} style={{ color: isOverdue ? "#f43f5e" : "#64748b" }} />
           <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: isOverdue ? "#f43f5e" : "#64748b" }}>{formatDate(task.dueDate)}</span>
         </div>
@@ -778,12 +757,6 @@ function TaskCard({ task, onStatusChange, onOpen, onEdit }: { task: Task; onStat
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 9, color: s.color, letterSpacing: "0.08em" }}>{s.label}</span>
-            {task.assigneeIds.length > 0 && (
-              <div className="flex -space-x-1">
-                {task.assigneeIds.slice(0, 3).map(id => { const a = getAssignee(id); return a ? <Avatar key={id} assignee={a} size={20} /> : null; })}
-                {task.assigneeIds.length > 3 && <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#64748b", fontFamily: "'Space Mono', monospace" }}>+{task.assigneeIds.length - 3}</div>}
-              </div>
-            )}
           </div>
           <div className="flex gap-1.5">
             {task.status !== "in-progress" && task.status !== "completed" && (
@@ -863,7 +836,7 @@ function TaskBoard({ tasks, onStatusChange, onOpenCreate, onOpenEdit, onOpenDeta
 
   const filtered = tasks
     .filter(t => {
-      if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.client.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.description.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterStatus !== "all" && t.status !== filterStatus) return false;
       if (filterPriority !== "all" && t.priority !== filterPriority) return false;
       return true;
@@ -878,9 +851,9 @@ function TaskBoard({ tasks, onStatusChange, onOpenCreate, onOpenEdit, onOpenDeta
       <div className="flex items-start justify-between mb-8 gap-4">
         <div>
           <ShinyText><h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-1px", display: "inline" }}>Task Board</h1></ShinyText>
-          <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Manage and execute all client work in one place.</p>
+          <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Manage and execute your personal tasks in one place.</p>
         </div>
-        <button onClick={onOpenCreate} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm shrink-0 transition-all duration-200 hover:scale-[1.03]"
+        <button onClick={onOpenCreate} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm shrink-0 transition-all duration-200 hover:scale-[1.03] cursor-pointer"
           style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 24px rgba(0,255,163,0.3)" }}>
           <Plus size={16} /> New Task
         </button>
@@ -890,7 +863,7 @@ function TaskBoard({ tasks, onStatusChange, onOpenCreate, onOpenEdit, onOpenDeta
         <div style={{ position: "relative", flex: "1 1 200px" }}>
           <Search size={13} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
           <input className="w-full" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#fff", padding: "9px 14px 9px 36px", fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none" }}
-            placeholder="Search tasks or clients…" value={search} onChange={e => setSearch(e.target.value)} />
+            placeholder="Search tasks…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         {[
           { val: filterStatus,   set: setFilterStatus,   opts: [["all","All Status"],["pending","Pending"],["in-progress","In Progress"],["completed","Completed"],["overdue","Overdue"]] },
@@ -907,7 +880,7 @@ function TaskBoard({ tasks, onStatusChange, onOpenCreate, onOpenEdit, onOpenDeta
       </div>
 
       {tasks.length === 0
-        ? <EmptyState icon={LayoutGrid} title="No tasks yet" body="Create your first task to start tracking client work across your team." action="Create Task" onAction={onOpenCreate} />
+        ? <EmptyState icon={LayoutGrid} title="No tasks yet" body="Create your first task to start tracking your personal workload." action="Create Task" onAction={onOpenCreate} />
         : filtered.length === 0
           ? <NoResults onClear={() => { setSearch(""); setFilterStatus("all"); setFilterPriority("all"); }} />
           : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -946,7 +919,7 @@ function DashboardStats({ tasks }: { tasks: Task[] }) {
     <div className="page-enter">
       <div className="mb-8">
         <ShinyText><h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-1px", display: "inline" }}>Dashboard Stats</h1></ShinyText>
-        <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Live overview across all clients and campaigns.</p>
+        <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Live overview of your personal workload.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -959,7 +932,7 @@ function DashboardStats({ tasks }: { tasks: Task[] }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {[
-          { title: "By Client", glow: "#00ffa3", items: ["NovaBrand","PulseWear","DropZone","ArcHQ"].map(c => ({ label: c, count: tasks.filter(t => t.client === c).length, color: "#00ffa3" })) },
+          { title: "By Status", glow: "#00ffa3", items: (["pending","in-progress","completed","overdue"] as Status[]).map(s => ({ label: STATUS_CONFIG[s].label, count: tasks.filter(t => t.status === s).length, color: STATUS_CONFIG[s].color })) },
           { title: "By Priority", glow: "#6e00ff", items: (["critical","high","medium","low"] as Priority[]).map(p => ({ label: PRIORITY_CONFIG[p].label, count: tasks.filter(t => t.priority === p).length, color: PRIORITY_CONFIG[p].color })) },
         ].map(({ title, glow, items }) => (
           <SpotlightCard key={title} className="p-6" glowColor={glow}>
@@ -994,10 +967,10 @@ function AnalyticsPage({ tasks }: { tasks: Task[] }) {
     { name: "Overdue",     value: tasks.filter(t => t.status === "overdue").length,     color: "#f43f5e" },
   ].filter(d => d.value > 0);
 
-  const clientData = ["NovaBrand","PulseWear","DropZone","ArcHQ"].map(c => ({
-    name: c,
-    Total: tasks.filter(t => t.client === c).length,
-    Done:  tasks.filter(t => t.client === c && t.status === "completed").length,
+  const priorityData = (["critical","high","medium","low"] as Priority[]).map(p => ({
+    name: PRIORITY_CONFIG[p].label,
+    Total: tasks.filter(t => t.priority === p).length,
+    Done:  tasks.filter(t => t.priority === p && t.status === "completed").length,
   }));
 
   const weeklyData = [
@@ -1024,7 +997,7 @@ function AnalyticsPage({ tasks }: { tasks: Task[] }) {
     <div className="page-enter">
       <div className="mb-8">
         <ShinyText><h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-1px", display: "inline" }}>Analytics</h1></ShinyText>
-        <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Performance trends and delivery insights across all campaigns.</p>
+        <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Performance trends and delivery insights for your tasks.</p>
       </div>
 
       {tasks.length === 0 ? (
@@ -1045,11 +1018,11 @@ function AnalyticsPage({ tasks }: { tasks: Task[] }) {
             </ResponsiveContainer>
           </SpotlightCard>
 
-          {/* Bar: by client */}
+          {/* Bar: by priority */}
           <SpotlightCard className="p-6" glowColor="#6e00ff">
-            <h3 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 14, color: "#fff", marginBottom: 16 }}>Tasks by Client</h3>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 14, color: "#fff", marginBottom: 16 }}>Tasks by Priority</h3>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={clientData} barGap={4}>
+              <BarChart data={priorityData} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" tick={{ fontFamily: "'Space Mono', monospace", fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontFamily: "'Space Mono', monospace", fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
@@ -1129,12 +1102,26 @@ function AnalyticsPage({ tasks }: { tasks: Task[] }) {
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 function SettingsPage({ onLogout, onDeleteCompleted }: { onLogout: () => void; onDeleteCompleted: () => void }) {
-  const [profile, setProfile] = useState({ name: "Jordan Lee", email: "jordan@edgeboard.io", role: "Creative Director" });
+  const [profile, setProfile] = useState({
+    name: localStorage.getItem("user_name") || "Jordan Lee",
+    email: localStorage.getItem("user_email") || "jordan@edgeboard.io",
+    role: localStorage.getItem("user_email") === "jordan@colledge.in" ? "Admin" : "Member"
+  });
   const [notifications, setNotifications] = useState({ email: true, push: false, digest: true, overdue: true });
   const [dangerConfirm, setDangerConfirm] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const handleSave = () => {
+    localStorage.setItem("user_name", profile.name);
+    localStorage.setItem("user_email", profile.email);
+    const initials = profile.name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
+    localStorage.setItem("user_initials", initials || "U");
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      window.location.reload();
+    }, 1000);
+  };
 
   const inputCls: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#fff", padding: "10px 14px", fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: "none", width: "100%" };
 
@@ -1152,16 +1139,18 @@ function SettingsPage({ onLogout, onDeleteCompleted }: { onLogout: () => void; o
   );
 
   return (
-    <div className="page-enter max-w-2xl">
+    <div className="page-enter max-w-2xl mx-auto">
       <div className="mb-8">
         <ShinyText><h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-1px", display: "inline" }}>Settings</h1></ShinyText>
-        <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Manage your account, preferences, and workspace.</p>
+        <p style={{ color: "#64748b", fontFamily: "'DM Sans', sans-serif", fontSize: 13, marginTop: 4 }}>Manage your account and preferences.</p>
       </div>
 
       {/* Profile */}
       <Section title="Profile">
         <div className="flex items-center gap-4 mb-6">
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #00ffa3, #6e00ff)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: "#0b0f19", flexShrink: 0 }}>JL</div>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg, #00ffa3, #6e00ff)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: "#0b0f19", flexShrink: 0 }}>
+            {localStorage.getItem("user_initials") || "U"}
+          </div>
           <div>
             <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: "#fff", fontSize: 15 }}>{profile.name}</p>
             <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 2 }}>{profile.role}</p>
@@ -1170,8 +1159,7 @@ function SettingsPage({ onLogout, onDeleteCompleted }: { onLogout: () => void; o
         <div className="grid grid-cols-1 gap-4">
           {[
             { label: "Full Name", key: "name",  placeholder: "Your full name" },
-            { label: "Email",     key: "email", placeholder: "you@agency.com" },
-            { label: "Role",      key: "role",  placeholder: "Your role" },
+            { label: "Email",     key: "email", placeholder: "you@personal.com" },
           ].map(({ label, key, placeholder }) => (
             <div key={key}>
               <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 5 }}>{label}</label>
@@ -1179,7 +1167,7 @@ function SettingsPage({ onLogout, onDeleteCompleted }: { onLogout: () => void; o
             </div>
           ))}
         </div>
-        <button onClick={handleSave} className="flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.02]"
+        <button onClick={handleSave} className="flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.02] cursor-pointer"
           style={{ fontFamily: "'DM Sans', sans-serif", background: saved ? "rgba(0,255,163,0.15)" : "linear-gradient(135deg, #00ffa3, #00cc82)", color: saved ? "#00ffa3" : "#0b0f19", border: saved ? "1px solid rgba(0,255,163,0.3)" : "none", boxShadow: saved ? "none" : "0 0 20px rgba(0,255,163,0.25)" }}>
           {saved ? <><CheckCircle size={14} /> Saved!</> : "Save Changes"}
         </button>
@@ -1292,11 +1280,54 @@ export default function App() {
   const [drawerTask, setDrawerTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check login session on mount
+  // Check login session on mount (including Google OAuth redirect hash parameters)
   useEffect(() => {
-    const savedEmail = localStorage.getItem("user_email");
-    if (savedEmail) {
-      setAppState("app");
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token=")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      
+      const processGoogleLogin = async () => {
+        try {
+          let email = "";
+          let name = "";
+          
+          if (accessToken === "mock_google_token") {
+            email = params.get("email") || "jordan@colledge.in";
+            name = params.get("name") || "Jordan Lee";
+          } else {
+            const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`);
+            if (response.ok) {
+              const data = await response.json();
+              email = data.email;
+              name = data.name || data.given_name || email.split("@")[0];
+            } else {
+              throw new Error("Failed to validate Google token");
+            }
+          }
+          
+          if (email) {
+            localStorage.setItem("user_email", email);
+            localStorage.setItem("user_name", name);
+            const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
+            localStorage.setItem("user_initials", initials || "U");
+            
+            // Clean hash fragment from the URL bar cleanly
+            window.history.replaceState(null, "", window.location.pathname);
+            setAppState("app");
+          }
+        } catch (error) {
+          console.error("Error parsing Google OAuth redirect hash:", error);
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      };
+      
+      processGoogleLogin();
+    } else {
+      const savedEmail = localStorage.getItem("user_email");
+      if (savedEmail) {
+        setAppState("app");
+      }
     }
   }, []);
 

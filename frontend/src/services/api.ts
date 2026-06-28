@@ -119,3 +119,27 @@ export const taskService = {
     return handleResponse(response);
   },
 };
+
+export const authService = {
+  async register(name: string, email: string, password: string): Promise<{ name: string; email: string }> {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, email, password })
+    });
+    return handleResponse(response);
+  },
+
+  async login(email: string, password: string): Promise<{ name: string; email: string }> {
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+    return handleResponse(response);
+  }
+};
