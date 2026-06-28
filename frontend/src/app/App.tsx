@@ -362,7 +362,7 @@ function LoginPage({ onLogin, onGoRegister, theme = "dark", onLogoClick }: { onL
 
   const handleGoogleSignIn = () => {
     const origin = window.location.origin;
-    const clientId = (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${origin}&response_type=token&scope=email profile`;
     window.location.href = url;
   };
