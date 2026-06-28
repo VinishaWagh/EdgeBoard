@@ -243,27 +243,23 @@ function Avatar({ assignee, size = 28 }: { assignee: Assignee; size?: number }) 
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
-function LoginPage({ onLogin, onGoRegister }: { onLogin: () => void; onGoRegister: () => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+function LoginPage({ onLogin }: { onLogin: (email: string, name: string) => void }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [googleName, setGoogleName] = useState("");
+  const [loginError, setLoginError] = useState("");
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!email.trim()) e.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = "Enter a valid email address";
-    if (!password) e.password = "Password is required";
-    else if (password.length < 6) e.password = "Password must be at least 6 characters";
-    return e;
-  };
-
-  const handleSubmit = () => {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    setLoading(true);
-    setTimeout(() => { setLoading(false); onLogin(); }, 1400);
+  const handleLoginSubmit = () => {
+    if (!googleEmail.trim()) {
+      setLoginError("Google email is required");
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(googleEmail)) {
+      setLoginError("Please enter a valid Google email");
+      return;
+    }
+    const name = googleName.trim() || googleEmail.split("@")[0];
+    onLogin(googleEmail.trim(), name);
   };
 
   const inputStyle = (hasErr: boolean): React.CSSProperties => ({
@@ -287,55 +283,68 @@ function LoginPage({ onLogin, onGoRegister }: { onLogin: () => void; onGoRegiste
         </div>
 
         <SpotlightCard className="p-8" glowColor="#00ffa3">
-          {/* OAuth */}
-          <div className="flex gap-3 mb-6">
-            {[{ icon: Chrome, label: "Google" }, { icon: Github, label: "GitHub" }].map(({ icon: Icon, label }) => (
-              <button key={label} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1", fontFamily: "'DM Sans', sans-serif" }}>
-                <Icon size={15} /> {label}
+          {!showPrompt ? (
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={() => setShowPrompt(true)}
+                className="flex items-center justify-center gap-3 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                style={{ background: "#fff", color: "#0b0f19", border: "1px solid #fff", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 0 20px rgba(255,255,255,0.15)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.9h6.6c-.28 1.48-1.12 2.73-2.38 3.58v3h3.84c2.25-2.07 3.54-5.12 3.54-8.73z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.84-3c-1.07.72-2.44 1.16-4.12 1.16-3.17 0-5.85-2.14-6.81-5.02H1.24v3.1A12 12 0 0 0 12 24z"/>
+                  <path fill="#FBBC05" d="M5.19 14.23A7.17 7.17 0 0 1 4.8 12c0-.79.13-1.57.39-2.32V6.58H1.24A11.96 11.96 0 0 0 0 12c0 2.03.52 4 1.24 5.72l3.95-3.49z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.96 1.19 15.24 0 12 0 7.24 0 3.19 2.72 1.24 6.58l3.95 3.49c.96-2.88 3.64-5.32 6.81-5.32z"/>
+                </svg>
+                Sign In with Google
               </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 mb-6">
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em" }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div>
-              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Email</label>
-              <input style={inputStyle(!!errors.email)} type="email" placeholder="you@agency.com" value={email} onChange={e => setEmail(e.target.value)}
-                onFocus={e => (e.target.style.borderColor = "#00ffa350")} onBlur={e => (e.target.style.borderColor = errors.email ? "#f43f5e" : "rgba(255,255,255,0.1)")} />
-              {errors.email && <p style={{ color: "#f43f5e", fontSize: 12, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{errors.email}</p>}
             </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, color: "#fff", fontWeight: 700, marginBottom: 8 }}>Google Account Sign-In</h2>
+              
+              <div>
+                <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Google Email</label>
+                <input 
+                  style={inputStyle(!!loginError)} 
+                  type="email" 
+                  placeholder="user@gmail.com" 
+                  value={googleEmail} 
+                  onChange={e => { setGoogleEmail(e.target.value); setLoginError(""); }} 
+                />
+              </div>
 
-            <div>
-              <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Password</label>
-              <div style={{ position: "relative" }}>
-                <input style={{ ...inputStyle(!!errors.password), paddingRight: 44 }} type={showPass ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
-                  onFocus={e => (e.target.style.borderColor = "#00ffa350")} onBlur={e => (e.target.style.borderColor = errors.password ? "#f43f5e" : "rgba(255,255,255,0.1)")}
-                  onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-                <button onClick={() => setShowPass(v => !v)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#64748b", background: "none", border: "none", cursor: "pointer" }}>
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              <div>
+                <label style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Full Name</label>
+                <input 
+                  style={inputStyle(false)} 
+                  type="text" 
+                  placeholder="John Doe" 
+                  value={googleName} 
+                  onChange={e => setGoogleName(e.target.value)} 
+                />
+              </div>
+
+              {loginError && <p style={{ color: "#f43f5e", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{loginError}</p>}
+              
+              <div className="flex gap-2 mt-2">
+                <button 
+                  type="button"
+                  onClick={() => setShowPrompt(false)}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1", fontFamily: "'DM Sans', sans-serif" }}>
+                  Back
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleLoginSubmit}
+                  className="flex-1 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 cursor-pointer"
+                  style={{ background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 20px rgba(0,255,163,0.2)", fontFamily: "'DM Sans', sans-serif" }}>
+                  Authenticate
                 </button>
               </div>
-              {errors.password && <p style={{ color: "#f43f5e", fontSize: 12, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><AlertTriangle size={11} />{errors.password}</p>}
             </div>
-
-            <button onClick={handleSubmit} disabled={loading}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] disabled:opacity-70 disabled:scale-100"
-              style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 24px rgba(0,255,163,0.3)", marginTop: 4 }}>
-              {loading ? <><Spinner /> Signing in…</> : <>Sign In <ArrowRight size={15} /></>}
-            </button>
-          </div>
+          )}
         </SpotlightCard>
-
-        <p style={{ textAlign: "center", color: "#64748b", fontSize: 13, fontFamily: "'DM Sans', sans-serif", marginTop: 20 }}>
-          No account?{" "}
-          <button onClick={onGoRegister} style={{ color: "#00ffa3", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>Create one →</button>
-        </p>
       </div>
     </div>
   );
@@ -1283,6 +1292,14 @@ export default function App() {
   const [drawerTask, setDrawerTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Check login session on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("user_email");
+    if (savedEmail) {
+      setAppState("app");
+    }
+  }, []);
+
   // Load tasks on mount or appState change
   useEffect(() => {
     if (appState === "app") {
@@ -1300,6 +1317,21 @@ export default function App() {
       loadTasks();
     }
   }, [appState]);
+
+  const handleGoogleLogin = useCallback((email: string, name: string) => {
+    localStorage.setItem("user_email", email);
+    localStorage.setItem("user_name", name);
+    const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
+    localStorage.setItem("user_initials", initials || "U");
+    setAppState("app");
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("user_name");
+    localStorage.removeItem("user_initials");
+    setAppState("login");
+  }, []);
 
   const handleStatusChange = useCallback(async (id: string, status: Status) => {
     // Find task locally
@@ -1383,10 +1415,7 @@ export default function App() {
 
       <div className="relative z-10 min-h-screen" style={{ fontFamily: "'DM Sans', sans-serif" }}>
         {appState === "login" && (
-          <LoginPage onLogin={() => setAppState("app")} onGoRegister={() => setAppState("register")} />
-        )}
-        {appState === "register" && (
-          <RegisterPage onRegister={() => setAppState("app")} onGoLogin={() => setAppState("login")} />
+          <LoginPage onLogin={handleGoogleLogin} />
         )}
         {appState === "app" && (
           <div className="flex h-screen overflow-hidden">
@@ -1412,12 +1441,18 @@ export default function App() {
 
               <div style={{ padding: "12px 10px 16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.04)" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #00ffa3, #6e00ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontFamily: "'Syne', sans-serif", fontWeight: 800, color: "#0b0f19", flexShrink: 0 }}>JL</div>
-                  <div style={{ flex: 1, overflow: "hidden" }}>
-                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#cbd5e1", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Jordan Lee</p>
-                    <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 8, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em" }}>Admin</p>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #00ffa3, #6e00ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontFamily: "'Syne', sans-serif", fontWeight: 800, color: "#0b0f19", flexShrink: 0 }}>
+                    {localStorage.getItem("user_initials") || "U"}
                   </div>
-                  <button onClick={() => setAppState("login")} style={{ color: "#374151", background: "none", border: "none", cursor: "pointer", padding: 2 }} title="Sign out">
+                  <div style={{ flex: 1, overflow: "hidden" }}>
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: "#cbd5e1", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {localStorage.getItem("user_name") || "User"}
+                    </p>
+                    <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 8, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      {localStorage.getItem("user_email") === "jordan@colledge.in" ? "Admin" : "Member"}
+                    </p>
+                  </div>
+                  <button onClick={handleLogout} style={{ color: "#374151", background: "none", border: "none", cursor: "pointer", padding: 2 }} title="Sign out">
                     <LogOut size={13} />
                   </button>
                 </div>
@@ -1427,11 +1462,20 @@ export default function App() {
 
             {/* Main */}
             <main className="flex-1 overflow-y-auto p-8">
-              {page === "board"     && <TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onOpenCreate={() => setModalTask("new")} onOpenEdit={openEdit} onOpenDetail={t => setDrawerTask(t)} />}
-              {page === "stats"     && <DashboardStats tasks={tasks} />}
-              {page === "analytics" && <AnalyticsPage tasks={tasks} />}
-              {page === "settings"  && <SettingsPage onLogout={() => setAppState("login")} onDeleteCompleted={handleDeleteCompleted} />}
-              {page === "specs"     && <SystemSpecs />}
+              {loading && tasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <Spinner />
+                  <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, color: "#64748b" }}>Syncing with database...</p>
+                </div>
+              ) : (
+                <>
+                  {page === "board"     && <TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onOpenCreate={() => setModalTask("new")} onOpenEdit={openEdit} onOpenDetail={t => setDrawerTask(t)} />}
+                  {page === "stats"     && <DashboardStats tasks={tasks} />}
+                  {page === "analytics" && <AnalyticsPage tasks={tasks} />}
+                  {page === "settings"  && <SettingsPage onLogout={handleLogout} onDeleteCompleted={handleDeleteCompleted} />}
+                  {page === "specs"     && <SystemSpecs />}
+                </>
+              )}
             </main>
           </div>
         )}

@@ -2,6 +2,18 @@ import { Task } from '../app/App';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const getUserEmail = (): string => {
+  return localStorage.getItem('user_email') || '';
+};
+
+const getAuthHeaders = (extraHeaders: Record<string, string> = {}): Record<string, string> => {
+  return {
+    'Content-Type': 'application/json',
+    'X-User-Email': getUserEmail(),
+    ...extraHeaders
+  };
+};
+
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
     let errorMessage = 'Something went wrong';
@@ -58,13 +70,21 @@ export const taskService = {
     const queryString = query.toString();
     const url = `${API_URL}/tasks${queryString ? `?${queryString}` : ''}`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'X-User-Email': getUserEmail()
+      }
+    });
     const data = await handleResponse(response);
     return data.map(mapTaskFromBackend);
   },
 
   async getTaskById(id: string): Promise<Task> {
-    const response = await fetch(`${API_URL}/tasks/${id}`);
+    const response = await fetch(`${API_URL}/tasks/${id}`, {
+      headers: {
+        'X-User-Email': getUserEmail()
+      }
+    });
     const data = await handleResponse(response);
     return mapTaskFromBackend(data);
   },
@@ -72,9 +92,7 @@ export const taskService = {
   async createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
     const response = await fetch(`${API_URL}/tasks`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(taskData),
     });
     const data = await handleResponse(response);
@@ -84,9 +102,7 @@ export const taskService = {
   async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
     const response = await fetch(`${API_URL}/tasks/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(taskData),
     });
     const data = await handleResponse(response);
@@ -96,6 +112,9 @@ export const taskService = {
   async deleteTask(id: string): Promise<{ id: string; message: string }> {
     const response = await fetch(`${API_URL}/tasks/${id}`, {
       method: 'DELETE',
+      headers: {
+        'X-User-Email': getUserEmail()
+      }
     });
     return handleResponse(response);
   },

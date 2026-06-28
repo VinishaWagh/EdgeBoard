@@ -26,6 +26,11 @@ const activitySchema = new mongoose.Schema({
 
 const taskSchema = new mongoose.Schema(
   {
+    userEmail: {
+      type: String,
+      required: [true, 'User email is required to associate tasks'],
+      index: true
+    },
     title: {
       type: String,
       required: [true, 'Please provide a task title'],
@@ -61,7 +66,7 @@ const taskSchema = new mongoose.Schema(
       default: 'medium'
     },
     dueDate: {
-      type: String, // Keep as String to match EdgeBoard's YYYY-MM-DD string date formats
+      type: String,
       required: false,
       default: ''
     },

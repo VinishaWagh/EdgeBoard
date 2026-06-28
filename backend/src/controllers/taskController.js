@@ -1,14 +1,19 @@
 import Task from '../models/Task.js';
 
-// @desc    Get all tasks with filtering, sorting, and search
+// @desc    Get all tasks for the logged in user with filtering, sorting, and search
 // @route   GET /api/tasks
-// @access  Public
+// @access  Public (Secured by X-User-Email header)
 export const getTasks = async (req, res) => {
   try {
     const { status, priority, search, sortBy, sortOrder } = req.query;
+    const userEmail = req.headers['x-user-email'];
+
+    if (!userEmail) {
+      return res.status(400).json({ message: 'User email header (x-user-email) is required' });
+    }
     
-    // Build query object
-    const query = {};
+    // Build query object scoped to user
+    const query = { userEmail };
     
     if (status && status !== 'all') {
       query.status = status;
@@ -44,10 +49,16 @@ export const getTasks = async (req, res) => {
 
 // @desc    Get a single task by ID
 // @route   GET /api/tasks/:id
-// @access  Public
+// @access  Public (Secured by X-User-Email header)
 export const getTaskById = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const userEmail = req.headers['x-user-email'];
+
+    if (!userEmail) {
+      return res.status(400).json({ message: 'User email header (x-user-email) is required' });
+    }
+
+    const task = await Task.findOne({ _id: req.params.id, userEmail });
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
@@ -62,17 +73,23 @@ export const getTaskById = async (req, res) => {
 
 // @desc    Create a new task
 // @route   POST /api/tasks
-// @access  Public
+// @access  Public (Secured by X-User-Email header)
 export const createTask = async (req, res) => {
   try {
     const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity } = req.body;
+    const userEmail = req.headers['x-user-email'];
+
+    if (!userEmail) {
+      return res.status(400).json({ message: 'User email header (x-user-email) is required' });
+    }
     
-    // Basic title validation (backend level)
+    // Basic title validation
     if (!title || title.trim().length < 3) {
       return res.status(400).json({ message: 'Title is required and must be at least 3 characters long' });
     }
 
     const newTask = new Task({
+      userEmail,
       title,
       client,
       description,
@@ -97,15 +114,20 @@ export const createTask = async (req, res) => {
 
 // @desc    Update a task
 // @route   PUT /api/tasks/:id
-// @access  Public
+// @access  Public (Secured by X-User-Email header)
 export const updateTask = async (req, res) => {
   try {
     const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity } = req.body;
+    const userEmail = req.headers['x-user-email'];
+
+    if (!userEmail) {
+      return res.status(400).json({ message: 'User email header (x-user-email) is required' });
+    }
     
-    // Find task
-    const task = await Task.findById(req.params.id);
+    // Find task scoped to user
+    const task = await Task.findOne({ _id: req.params.id, userEmail });
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: 'Task not found or access denied' });
     }
     
     // Update fields if provided
@@ -135,12 +157,19 @@ export const updateTask = async (req, res) => {
 
 // @desc    Delete a task
 // @route   DELETE /api/tasks/:id
-// @access  Public
+// @access  Public (Secured by X-User-Email header)
 export const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const userEmail = req.headers['x-user-email'];
+
+    if (!userEmail) {
+      return res.status(400).json({ message: 'User email header (x-user-email) is required' });
+    }
+    
+    // Verify task ownership before delete
+    const task = await Task.findOne({ _id: req.params.id, userEmail });
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: 'Task not found or access denied' });
     }
     
     await Task.findByIdAndDelete(req.params.id);

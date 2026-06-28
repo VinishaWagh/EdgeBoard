@@ -2,6 +2,7 @@ import Task from '../models/Task.js';
 
 const INITIAL_TASKS = [
   {
+    userEmail: "jordan@colledge.in",
     title: "Launch Social Campaign — Q3 Summer Drop",
     client: "NovaBrand",
     priority: "critical",
@@ -17,6 +18,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "Redesign Landing Page Hero Section",
     client: "PulseWear",
     priority: "high",
@@ -30,6 +32,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "Influencer Brief Deck for TikTok Push",
     client: "DropZone",
     priority: "high",
@@ -45,6 +48,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "Email Drip Sequence — Onboarding Flow",
     client: "ArcHQ",
     priority: "medium",
@@ -59,6 +63,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "SEO Audit & Content Gap Analysis",
     client: "NovaBrand",
     priority: "medium",
@@ -73,6 +78,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "Paid Ads Creative — Meta Reels",
     client: "DropZone",
     priority: "critical",
@@ -86,6 +92,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "Monthly Analytics Report — June",
     client: "PulseWear",
     priority: "low",
@@ -100,6 +107,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "Brand Guidelines Refresh",
     client: "ArcHQ",
     priority: "high",
@@ -113,6 +121,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "YouTube Thumbnail A/B Test",
     client: "DropZone",
     priority: "low",
@@ -126,6 +135,7 @@ const INITIAL_TASKS = [
     ],
   },
   {
+    userEmail: "jordan@colledge.in",
     title: "CRM Integration — HubSpot Setup",
     client: "NovaBrand",
     priority: "medium",
