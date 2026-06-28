@@ -1,0 +1,55 @@
+Create a high-fidelity, premium MERN Stack Task Tracker dashboard UI design in Figma. The design must be modern, dark-themed, and tailormade for a
+  youth-focused marketing agency, aligning with the visual identity of "COLL-EDGE CONNECT" (https://www.colledgeconnect.in/).                         
+                                                                                                                                                      
+    ### 1. Color Palette & Branding                                                                                                                   
+    - Primary Background: Absolute Deep Space Black (#0b0f19) with a subtle radial gradient radiating from the top center (#1e1b4b).                  
+    - Accent 1 (Primary Neon Mint): #00FFA3 (used for glowing badges, active states, borders, and call-to-actions).                                   
+    - Accent 2 (Digital Violet): #6E00FF (used for secondary glows, hover cards, and gradient highlights).                                            
+    - Text Hierarchy: Crisp White (#FFFFFF) for titles, Light Slate (#CBD5E1) for body text, and Muted Grey (#64748B) for labels.                     
+    - Aesthetic Style: Glassmorphism (semi-transparent cards with backdrop-filter: blur(12px), border: 1px solid rgba(255,255,255,0.08)).             
+                                                                                                                                                      
+    ### 2. Typography                                                                                                                                 
+    - Headings & Large Labels: "Syne" font (heavy weight, geometric, bold, with letter-spacing: -2px).                                                
+    - Navigation & Tags: "Space Mono" font (monospace, uppercase, letter-spacing: 2px, 10px-12px size).                                               
+    - Content & UI Controls: "DM Sans" or "Outfit" font (clean, round, high readability).                                                             
+                                                                                                                                                      
+    ### 3. Integrated ReactBits Components (UX Animations)                                                                                            
+    - Background Layer: Incorporate an interactive "Squares" layout—a clean digital grid background overlay with subtle, fading neon green cells.     
+    - Header Titles: Design "ShinyText" heading variables featuring a shifting, metallic, reflective light reflection overlay.                        
+    - Interaction Elements: Use "Magnet" buttons that slightly distort/shift on cursor hover.                                                         
+    - Cards: Implement "SpotlightCard" containers (Figma layout should display a subtle radial gradient centered at the cursor's mock position for    
+  hover variants).                                                                                                                                    
+    - Borders: Apply "BorderTrail" effects (cards showing a neon-mint particle running along the border edges for running or high-priority tasks).    
+                                                                                                                                                      
+    ### 4. Layout & Screen Structure (Desktop 1440px & Mobile 390px)                                                                                  
+    - Sidebar Navigation:                                                                                                                             
+      * Brand logo "COLL-EDGE CONNECT" in Syne font with green accents.                                                                               
+      * Links: "Task Board", "Dashboard Stats", "System Specs".                                                                                       
+      * Sidebar bottom includes a brand copyright badge.                                                                                              
+    - Dashboard Stats Page:                                                                                                                           
+      * Grid of 5 "SpotlightCard" metrics: "Total Tasks", "Pending" (rose accent), "In Progress" (blue accent), "Completed" (mint accent), and        
+  "Overdue" (amber accent).                                                                                                                           
+      * Smooth gradient fills for stats indicators.                                                                                                   
+    - Interactive Task Board Page:                                                                                                                    
+      * Search Bar: Sleek glass input with a custom search icon, glowing neon mint on focus.                                                          
+      * Filters Toolbar: Monospaced select dropdowns for Status, Priority, and Sorting parameters.                                                    
+      * Task Grid: Responsive card deck showing tasks with border trails, custom priority badges, due dates, and quick status action icons (Play,     
+  Check, Reopen).                                                                                                                                     
+      * Empty States: Visual placeholder illustrating zero matches with a CTA button.                                                                 
+    - Task Creation Modal Overlay:                                                                                                                    
+      * Center-aligned glass dialog with backdrop blur, structured using Figma Auto-Layout.                                                           
+      * Clean form inputs with floating labels, validating inputs with warning alerts on error states.                                                
+      * Primary and secondary actions (Save Changes / Cancel) using magnet button presets.                                                            
+    ──────                                                                                                                                            
+  ### 🧩 How ReactBits translates to Figma Features:                                                                                                  
+                                                                                                                                                      
+  If you are designing this manually in Figma, set up your design components with these Figma equivalents:                                            
+                                                                                                                                                      
+  1.  Squares  (Grid Background): Create a grid of  50px × 50px  rectangles in a frame. Set opacity to  3%  and randomly color a few cells with       
+  #00FFA3  at  10%  opacity to simulate the grid pulse.                                                                                               
+  2.  SpotlightCard  (Hover Effects): Create a component variant for your task cards. Add an Ellipse with a radial gradient (Center  #00FFA3  at  15% 
+  opacity, outer boundaries transitioning to transparent) and place it behind the text container as a hover highlight.                                
+  3.  BorderTrail  (Neon Trails): Create a vector border path on your cards and apply a gradient stroke. Use Figma's Smart Animate prototype          
+  transitions on loop to simulate the trail sliding around the card.                                                                                  
+  4.  ShinyText  (Header Reflection): Apply a linear gradient fill to the text inside Figma, placing a white/light-grey color stop between two darker 
+  color stops. Shift the center color stop in the hover/active variant to create a glare animation. 

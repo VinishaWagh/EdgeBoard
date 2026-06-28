@@ -10,18 +10,19 @@ export const getTasks = async (req, res) => {
     // Build query object
     const query = {};
     
-    if (status) {
+    if (status && status !== 'all') {
       query.status = status;
     }
     
-    if (priority) {
+    if (priority && priority !== 'all') {
       query.priority = priority;
     }
     
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } },
+        { client: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -64,7 +65,7 @@ export const getTaskById = async (req, res) => {
 // @access  Public
 export const createTask = async (req, res) => {
   try {
-    const { title, description, status, priority, dueDate } = req.body;
+    const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity } = req.body;
     
     // Basic title validation (backend level)
     if (!title || title.trim().length < 3) {
@@ -73,10 +74,14 @@ export const createTask = async (req, res) => {
 
     const newTask = new Task({
       title,
+      client,
       description,
       status,
       priority,
-      dueDate: dueDate || null
+      dueDate,
+      tags: tags || [],
+      assigneeIds: assigneeIds || [],
+      activity: activity || []
     });
 
     const savedTask = await newTask.save();
@@ -95,7 +100,7 @@ export const createTask = async (req, res) => {
 // @access  Public
 export const updateTask = async (req, res) => {
   try {
-    const { title, description, status, priority, dueDate } = req.body;
+    const { title, client, description, status, priority, dueDate, tags, assigneeIds, activity } = req.body;
     
     // Find task
     const task = await Task.findById(req.params.id);
@@ -105,10 +110,14 @@ export const updateTask = async (req, res) => {
     
     // Update fields if provided
     if (title !== undefined) task.title = title;
+    if (client !== undefined) task.client = client;
     if (description !== undefined) task.description = description;
     if (status !== undefined) task.status = status;
     if (priority !== undefined) task.priority = priority;
-    if (dueDate !== undefined) task.dueDate = dueDate || null;
+    if (dueDate !== undefined) task.dueDate = dueDate;
+    if (tags !== undefined) task.tags = tags;
+    if (assigneeIds !== undefined) task.assigneeIds = assigneeIds;
+    if (activity !== undefined) task.activity = activity;
 
     const updatedTask = await task.save();
     res.status(200).json(updatedTask);

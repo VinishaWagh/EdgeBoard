@@ -1,5 +1,29 @@
 import mongoose from 'mongoose';
 
+const activitySchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['created', 'status', 'comment', 'assigned'],
+    required: true
+  },
+  user: {
+    type: String,
+    required: true
+  },
+  time: {
+    type: String,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
+  }
+});
+
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -8,6 +32,11 @@ const taskSchema = new mongoose.Schema(
       trim: true,
       minlength: [3, 'Title must be at least 3 characters'],
       maxlength: [100, 'Title cannot exceed 100 characters']
+    },
+    client: {
+      type: String,
+      trim: true,
+      default: ''
     },
     description: {
       type: String,
@@ -18,7 +47,7 @@ const taskSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ['pending', 'in-progress', 'completed'],
+        values: ['pending', 'in-progress', 'completed', 'overdue'],
         message: '{VALUE} is not a valid status'
       },
       default: 'pending'
@@ -26,14 +55,27 @@ const taskSchema = new mongoose.Schema(
     priority: {
       type: String,
       enum: {
-        values: ['low', 'medium', 'high'],
+        values: ['critical', 'high', 'medium', 'low'],
         message: '{VALUE} is not a valid priority'
       },
       default: 'medium'
     },
     dueDate: {
-      type: Date,
-      required: false
+      type: String, // Keep as String to match EdgeBoard's YYYY-MM-DD string date formats
+      required: false,
+      default: ''
+    },
+    tags: {
+      type: [String],
+      default: []
+    },
+    assigneeIds: {
+      type: [String],
+      default: []
+    },
+    activity: {
+      type: [activitySchema],
+      default: []
     }
   },
   {
