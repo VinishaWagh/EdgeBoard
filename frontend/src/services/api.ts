@@ -14,18 +14,35 @@ const getAuthHeaders = (extraHeaders: Record<string, string> = {}): Record<strin
   };
 };
 
-const handleResponse = async (response: Response) => {
+const handleResponse = async (response: Response, url: string) => {
   if (!response.ok) {
-    let errorMessage = 'Something went wrong';
+    let errorMessage = `HTTP ${response.status} (${response.statusText || 'Error'}) from ${url}`;
     try {
       const errorData = await response.json();
       errorMessage = errorData.message || errorMessage;
     } catch (e) {
-      // JSON parsing failed
+      // JSON parsing failed, likely HTML or raw text
+      try {
+        const text = await response.clone().text();
+        if (text && text.trim().startsWith('<!DOCTYPE html>')) {
+          errorMessage = `HTTP ${response.status}: Received HTML instead of JSON. This usually indicates that the backend API URL is misconfigured, or the API route was not found (Url: ${url})`;
+        } else if (text && text.length < 150) {
+          errorMessage = `HTTP ${response.status}: ${text} (Url: ${url})`;
+        }
+      } catch (_) {}
     }
     throw new Error(errorMessage);
   }
   return response.json();
+};
+
+const customFetch = async (url: string, options?: RequestInit): Promise<Response> => {
+  try {
+    return await fetch(url, options);
+  } catch (err: any) {
+    console.error("Network Fetch Error:", err);
+    throw new Error(`Failed to reach the API server at: ${url}. Please check if the backend is running and your network / CORS is configured.`);
+  }
 };
 
 export const mapTaskFromBackend = (t: any): Task => {
@@ -82,22 +99,23 @@ export const taskService = {
     const queryString = query.toString();
     const url = `${API_URL}/tasks${queryString ? `?${queryString}` : ''}`;
     
-    const response = await fetch(url, {
+    const response = await customFetch(url, {
       headers: {
         'X-User-Email': getUserEmail()
       }
     });
-    const data = await handleResponse(response);
+    const data = await handleResponse(response, url);
     return data.map(mapTaskFromBackend);
   },
 
   async getTaskById(id: string): Promise<Task> {
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
+    const url = `${API_URL}/tasks/${id}`;
+    const response = await customFetch(url, {
       headers: {
         'X-User-Email': getUserEmail()
       }
     });
-    const data = await handleResponse(response);
+    const data = await handleResponse(response, url);
     return mapTaskFromBackend(data);
   },
 
@@ -107,12 +125,13 @@ export const taskService = {
       ...rest,
       client: category
     };
-    const response = await fetch(`${API_URL}/tasks`, {
+    const url = `${API_URL}/tasks`;
+    const response = await customFetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(body),
     });
-    const data = await handleResponse(response);
+    const data = await handleResponse(response, url);
     return mapTaskFromBackend(data);
   },
 
@@ -122,46 +141,50 @@ export const taskService = {
       ...rest,
       ...(category !== undefined ? { client: category } : {})
     };
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
+    const url = `${API_URL}/tasks/${id}`;
+    const response = await customFetch(url, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(body),
     });
-    const data = await handleResponse(response);
+    const data = await handleResponse(response, url);
     return mapTaskFromBackend(data);
   },
 
   async deleteTask(id: string): Promise<{ id: string; message: string }> {
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
+    const url = `${API_URL}/tasks/${id}`;
+    const response = await customFetch(url, {
       method: 'DELETE',
       headers: {
         'X-User-Email': getUserEmail()
       }
     });
-    return handleResponse(response);
+    return handleResponse(response, url);
   },
 };
 
 export const authService = {
   async register(name: string, email: string, password: string): Promise<{ name: string; email: string }> {
-    const response = await fetch(`${API_URL}/auth/register`, {
+    const url = `${API_URL}/auth/register`;
+    const response = await customFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ name, email, password })
     });
-    return handleResponse(response);
+    return handleResponse(response, url);
   },
 
   async login(email: string, password: string): Promise<{ name: string; email: string }> {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const url = `${API_URL}/auth/login`;
+    const response = await customFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ email, password })
     });
-    return handleResponse(response);
+    return handleResponse(response, url);
   }
 };
