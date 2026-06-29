@@ -14,6 +14,8 @@ import {
 } from "recharts";
 import { taskService, authService } from "../services/api";
 import TargetCursor from "../components/TargetCursor/TargetCursor";
+import { Toaster, toast } from "sonner";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -426,17 +428,10 @@ function LoginPage({ onLogin, onGoRegister, theme = "dark", onLogoClick }: { onL
         </div>
 
         <SpotlightCard className="p-8" glowColor="#00ffa3" theme={theme}>
-          <div className="flex flex-col gap-3 mb-6">
-            <button onClick={handleGoogleSignIn} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+          <div className="flex gap-3 mb-6">
+            <button onClick={handleGoogleSignIn} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer"
               style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.04)", border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(15,23,42,0.1)"}`, color: isDark ? "#cbd5e1" : "#334155", fontFamily: "'DM Sans', sans-serif" }}>
-              <Chrome size={15} /> Sign in with Google
-            </button>
-            <button onClick={() => {
-              const origin = window.location.origin;
-              window.location.href = `${origin}/#access_token=mock_google_token&email=jordan@colledge.in&name=Jordan+Lee`;
-            }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-              style={{ background: "rgba(0, 255, 163, 0.06)", border: "1px dashed rgba(0, 255, 163, 0.3)", color: "#00ffa3", fontFamily: "'DM Sans', sans-serif" }}>
-              <Zap size={14} /> Bypass with Mock Google Login
+              <Chrome size={15} /> Google
             </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
@@ -605,7 +600,7 @@ function RegisterPage({ onRegister, onGoLogin, theme = "dark", onLogoClick }: { 
     </div>
   );
 }
-function TaskModal({ initial, onClose, onSave, theme = "dark" }: { initial?: Task; onClose: () => void; onSave: (t: Task) => void; theme?: "dark" | "light" }) {
+function TaskModal({ initial, onClose, onSave, theme = "dark" }: { initial?: Task; onClose: () => void; onSave: (t: Task) => Promise<void>; theme?: "dark" | "light" }) {
   const [form, setForm] = useState({
     title:       initial?.title ?? "",
     category:    (initial?.category ?? "personal") as Category,
@@ -616,6 +611,8 @@ function TaskModal({ initial, onClose, onSave, theme = "dark" }: { initial?: Tas
     tags:        initial?.tags.join(", ") ?? "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -624,20 +621,30 @@ function TaskModal({ initial, onClose, onSave, theme = "dark" }: { initial?: Tas
     return e;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    onSave({
-      id: initial?.id ?? `t${Date.now()}`,
-      title: form.title, category: form.category, description: form.description,
-      priority: form.priority, status: form.status, dueDate: form.dueDate,
-      tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
-      activity: initial?.activity ?? [{ id: `ac${Date.now()}`, type: "created", user: "You", time: "just now", message: "Task added." }],
-      timeTracked: initial?.timeTracked ?? 0,
-      timerStartedAt: initial?.timerStartedAt ?? "",
-    });
-    onClose();
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({
+        id: initial?.id ?? `t${Date.now()}`,
+        title: form.title, category: form.category, description: form.description,
+        priority: form.priority, status: form.status, dueDate: form.dueDate,
+        tags: form.tags.split(",").map(t => t.trim()).filter(Boolean),
+        activity: initial?.activity ?? [{ id: `ac${Date.now()}`, type: "created", user: "You", time: "just now", message: "Task added." }],
+        timeTracked: initial?.timeTracked ?? 0,
+        timerStartedAt: initial?.timerStartedAt ?? "",
+      });
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setSaveError(err.message || "Failed to save task. Please check your connection.");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
 
   const isDark = theme === "dark";
 
@@ -735,13 +742,34 @@ function TaskModal({ initial, onClose, onSave, theme = "dark" }: { initial?: Tas
           </div>
         </div>
 
+        {saveError && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 12, borderRadius: 10, background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)", marginTop: 16 }}>
+            <AlertTriangle size={14} style={{ color: "#f43f5e", flexShrink: 0 }} />
+            <p style={{ color: "#f43f5e", fontSize: 12, margin: 0, fontFamily: "'DM Sans', sans-serif" }}>{saveError}</p>
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-            style={{ fontFamily: "'DM Sans', sans-serif", background: "linear-gradient(135deg, #00ffa3, #00cc82)", color: "#0b0f19", boxShadow: "0 0 20px rgba(0,255,163,0.25)" }}>
-            {initial ? "Save Changes" : "Add Task"}
+          <button onClick={handleSave} disabled={isSaving} className="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+            style={{ 
+              fontFamily: "'DM Sans', sans-serif", 
+              background: isSaving ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #00ffa3, #00cc82)", 
+              color: isSaving ? "#64748b" : "#0b0f19", 
+              boxShadow: isSaving ? "none" : "0 0 20px rgba(0,255,163,0.25)",
+              cursor: isSaving ? "not-allowed" : "pointer",
+              opacity: isSaving ? 0.7 : 1
+            }}>
+            {isSaving ? "Saving..." : (initial ? "Save Changes" : "Add Task")}
           </button>
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-            style={{ fontFamily: "'DM Sans', sans-serif", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1" }}>
+          <button onClick={onClose} disabled={isSaving} className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+            style={{ 
+              fontFamily: "'DM Sans', sans-serif", 
+              background: "rgba(255,255,255,0.06)", 
+              border: "1px solid rgba(255,255,255,0.1)", 
+              color: "#cbd5e1",
+              cursor: isSaving ? "not-allowed" : "pointer",
+              opacity: isSaving ? 0.7 : 1
+            }}>
             Cancel
           </button>
         </div>
@@ -2068,8 +2096,9 @@ export default function App() {
           setLoading(true);
           const data = await taskService.getTasks();
           setTasks(data);
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to load tasks from DB:", err);
+          toast.error(err.message || "Failed to load tasks from database. Please verify your connection or backend URL configuration.");
         } finally {
           setLoading(false);
         }
@@ -2126,8 +2155,10 @@ export default function App() {
         timeTracked: timeTrackedUpdate,
         timerStartedAt: timerStartedAtUpdate
       });
-    } catch (err) {
+      toast.success(`Task status updated to ${status}`);
+    } catch (err: any) {
       console.error("Failed to update status on DB:", err);
+      toast.error(err.message || "Failed to update task status in database");
     }
   }, []);
 
@@ -2148,6 +2179,7 @@ export default function App() {
           timeTracked: task.timeTracked || 0,
           timerStartedAt: task.timerStartedAt || ""
         });
+        toast.success("Task updated successfully!");
       } else {
         const created = await taskService.createTask({
           title: task.title,
@@ -2162,22 +2194,31 @@ export default function App() {
           timerStartedAt: ""
         });
         setTasks(prev => [created, ...prev]);
+        toast.success("Task created successfully!");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save task to DB:", err);
+      toast.error(err.message || "Failed to save task to database");
+      throw err;
     }
   }, [tasks]);
 
   const handleDeleteCompleted = useCallback(async () => {
     try {
       const completedTasks = tasks.filter(t => t.status === "completed");
+      if (completedTasks.length === 0) {
+        toast.info("No completed tasks to delete");
+        return;
+      }
       setTasks(prev => prev.filter(t => t.status !== "completed"));
       
       for (const t of completedTasks) {
         await taskService.deleteTask(t.id);
       }
-    } catch (err) {
+      toast.success("Completed tasks deleted successfully!");
+    } catch (err: any) {
       console.error("Failed to delete completed tasks:", err);
+      toast.error(err.message || "Failed to delete completed tasks");
     }
   }, [tasks]);
 
@@ -2194,6 +2235,8 @@ export default function App() {
     <>
       <style>{GLOBAL_STYLES}</style>
       <GridBackground theme={theme} />
+      <Toaster position="top-right" theme={theme} />
+
 
       <div className={`relative z-10 min-h-screen ${theme}`} style={{ fontFamily: "'DM Sans', sans-serif", color: colors.text }}>
         {appState === "landing"  && (
